@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from testrail import *
+import sys
+import os, path
+
+file_dir = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    case_number = 'get_case/' + sys.argv[1]
+except IndexError:
+    raise IndexError("You Should Input Test Case Number.")
+client = APIClient('<Your testrail URL>')
+client.user = '<testrail_account>'
+client.password = '<testrail_password>'
+case = client.send_get(case_number)
+
+robot_setting = '*** Settings ***\nResource    ../setup.txt\n'
+robot_variables = '*** Variables ***\n'
+robot_testcases = '*** Test Cases ***\n'
+robot_keywords = '*** Keywords ***\n'
+
+setting = robot_setting
+title = robot_testcases + case['title'] + '\n'
+label = {
+        'doc': '    [Documentation]    ',
+        'setup': '    [Setup]    ',
+        'tags': '    [Tags]    '}
+
+steps = ""
+keywords = robot_keywords
+# tag process
+
+# preconditions process
+if case[u'custom_preconds']: # empty preconditions will return none
+    steps += label['setup'] + 'Preconditions\n'
+    keywords += 'Preconditions\n'
+
+for num in range(len(case[u'custom_steps_separated'])):
+    if len(case[u'custom_steps_separated'][num][u'expected']) == 0:
+        steps += ('    ' + case[u'custom_steps_separated'][num][u'content'] + '\n')
+    else:
+        steps += ('    ' + case[u'custom_steps_separated'][num][u'content'] + ', ' + case[u'custom_steps_separated'][num][u'expected'].replace('\n', " ") + '\n')
+
+for num in range(len(case[u'custom_steps_separated'])):
+    if len(case[u'custom_steps_separated'][num][u'expected']) == 0:
+        keywords += (case[u'custom_steps_separated'][num][u'content'] + '\n')
+    else:
+        keywords += (case[u'custom_steps_separated'][num][u'content'] + ', ' + case[u'custom_steps_separated'][num][u'expected'].replace('\n', " ") + '\n')
+
+final = setting +'\n' + title + steps + '\n' + keywords
+
+if not os.path.exists(file_dir + "/output/"):
+    os.mkdir(file_dir + "/output/")
+
+output_file = open(file_dir + "/output/c" + sys.argv[1] + ".txt", "w")
+output_file.write(final.encode('utf8'))
+print "output: " + output_file.name
+output_file.close()
+
+try:
+    if sys.argv[2]:
+        kkauto_dir = os.path.abspath(os.path.join(file_dir, "../../"))
+        desination = kkauto_dir + '/test/kkbox/' + sys.argv[2] + '/'
+        file_name_in_new_desination = kkauto_dir + '/test/kkbox/' + sys.argv[2] + "/c" + sys.argv[1] + ".txt"
+        if os.path.exists(desination):
+            result = os.rename(output_file.name, file_name_in_new_desination)
+        else:
+            print 'folder not exists'
+
+except IndexError as a:
+    print "Second Argument: You can input name of suite to move there"
+
+print "move to: " + desination
