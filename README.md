@@ -25,4 +25,4 @@ Detect serial number of android devices and set information that appium need
 
 ###Usage: 
 
-`python config_generator.py`
+`$ python config_generator.py`
